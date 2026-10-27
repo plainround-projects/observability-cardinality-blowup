@@ -32,7 +32,7 @@ $(STAMP): requirements-dev.lock pyproject.toml
 install: $(STAMP) ## create .venv from the lock file
 
 up: .env $(STAMP) ## build and start the app, Prometheus, the Collector, Tempo and Grafana
-	docker compose up -d --build --wait --wait-timeout 900
+	docker compose up -d --build --wait --wait-timeout 1800
 	$(MAKE) --no-print-directory health
 
 health: $(STAMP) ## the app, Prometheus, Tempo and Grafana all answer
