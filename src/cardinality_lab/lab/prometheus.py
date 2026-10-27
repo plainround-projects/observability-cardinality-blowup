@@ -76,11 +76,17 @@ class PrometheusClient:
         except requests.RequestException:
             return False
 
-    def _get(self, path: str, params: Mapping[str, str] | None = None, timeout: float = 120.0) -> dict[str, Any]:
-        try:
-            response = self._session.get(f"{self._base}{path}", params=params, timeout=timeout)
-        except requests.RequestException as error:
-            raise PrometheusError(f"GET {path} failed: {error}") from error
+    def _get(self, path: str, params: Mapping[str, str] | None = None, timeout: float = 300.0) -> dict[str, Any]:
+        """GET a Prometheus API path; a blown-up Prometheus can take minutes to answer, so one timeout is retried."""
+        for attempt in range(2):
+            try:
+                response = self._session.get(f"{self._base}{path}", params=params, timeout=timeout)
+                break
+            except requests.Timeout as error:
+                if attempt == 1:
+                    raise PrometheusError(f"GET {path} timed out twice: {error}") from error
+            except requests.RequestException as error:
+                raise PrometheusError(f"GET {path} failed: {error}") from error
         if response.status_code != 200:
             raise PrometheusError(f"Prometheus answered {response.status_code} for {path}: {response.text[:200]}")
         body: dict[str, Any] = response.json()
@@ -131,7 +137,7 @@ class PrometheusClient:
             self.head_series(), self.resident_memory_bytes(), self.timed_query(), self.samples_per_scrape(job)
         )
 
-    def wait_for_scrapes(self, job: str, scrapes: int = 2, timeout_seconds: float = 180.0) -> None:
+    def wait_for_scrapes(self, job: str, scrapes: int = 2, timeout_seconds: float = 900.0) -> None:
         """Block until the target ``job`` has been scraped ``scrapes`` more times since this call."""
         start = self.scalar(f'count_over_time(scrape_duration_seconds{{job="{job}"}}[1h])')
         deadline = time.monotonic() + timeout_seconds

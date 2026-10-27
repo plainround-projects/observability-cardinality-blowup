@@ -114,7 +114,7 @@ class ScenarioRunner:
         prometheus: MetricsStore,
         tempo: TraceStore,
         load: Callable[[LoadPlan], LoadResult] = run_load,
-        log: Callable[[str], None] = print,
+        log: Callable[[str], None] = lambda message: print(message, flush=True),
     ) -> None:
         """Take the plan and the collaborators."""
         self._plan = plan

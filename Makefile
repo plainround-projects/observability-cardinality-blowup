@@ -38,7 +38,7 @@ up: .env $(STAMP) ## build and start the app, Prometheus, the Collector, Tempo a
 health: $(STAMP) ## the app, Prometheus, Tempo and Grafana all answer
 	$(PY) -m cardinality_lab.lab.health_cli
 
-# The whole lesson: baseline, blow-up, diagnosis, fix, guard and the hidden slow dependency. Takes about 15 minutes at
+# The whole lesson: baseline, blow-up, diagnosis, fix, guard and the hidden slow dependency. Takes about an hour at
 # the lesson's size (make run USERS=5000 REQUESTS=20000 is the quick version).
 run: $(STAMP) ## run the six phases and print the report (USERS=50000 REQUESTS=200000)
 	$(PY) -m cardinality_lab.lab.scenario_cli --users $(USERS) --requests $(REQUESTS)
