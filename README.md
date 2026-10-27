@@ -25,7 +25,7 @@ No cloud account, no secrets. The values in `.env.example` are local-only placeh
 
 ```bash
 make up                                  # builds the image, starts the app, Prometheus, the Collector, Tempo and Grafana, waits until healthy
-make run                                 # the lesson's six steps at its full size: 50,000 users, 200,000 requests (about 15 minutes on a quiet machine)
+make run                                 # the lesson's six steps at its full size: 50,000 users, 200,000 requests (30 minutes to an hour, mostly sending requests)
 make run USERS=5000 REQUESTS=20000       # the same six steps at a tenth of the size
 make load USERS=50000 REQUESTS=200000    # traffic only, to look at Grafana yourself
 make health                              # the app, Prometheus, Tempo, and Grafana querying both
