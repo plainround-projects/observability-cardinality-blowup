@@ -25,8 +25,8 @@ def main(argv: list[str] | None = None) -> int:
     runner = ScenarioRunner(
         plan,
         Compose(Path.cwd(), env),
-        PrometheusClient(f"http://127.0.0.1:{env.get('PROMETHEUS_HOST_PORT', '9090')}"),
-        TempoClient(f"http://127.0.0.1:{env.get('TEMPO_HOST_PORT', '3200')}"),
+        PrometheusClient(f"http://127.0.0.1:{env.get('PROMETHEUS_HOST_PORT', '29090')}"),
+        TempoClient(f"http://127.0.0.1:{env.get('TEMPO_HOST_PORT', '23200')}"),
     )
     print(render_report(runner.run()))
     return 0

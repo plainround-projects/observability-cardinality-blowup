@@ -15,8 +15,8 @@ from cardinality_lab.lab.tempo import TempoClient
 pytestmark = pytest.mark.integration
 
 APP = f"http://127.0.0.1:{os.environ.get('APP_HOST_PORT', '28082')}"
-PROMETHEUS = PrometheusClient(f"http://127.0.0.1:{os.environ.get('PROMETHEUS_HOST_PORT', '9090')}")
-TEMPO = TempoClient(f"http://127.0.0.1:{os.environ.get('TEMPO_HOST_PORT', '3200')}")
+PROMETHEUS = PrometheusClient(f"http://127.0.0.1:{os.environ.get('PROMETHEUS_HOST_PORT', '29090')}")
+TEMPO = TempoClient(f"http://127.0.0.1:{os.environ.get('TEMPO_HOST_PORT', '23200')}")
 
 
 def test_the_app_answers_a_checkout_and_rejects_a_request_without_identity():

@@ -32,20 +32,20 @@ def main() -> int:
         ("app /healthz", _http_ok(f"http://127.0.0.1:{env.get('APP_HOST_PORT', '28082')}/healthz")),
         (
             "prometheus /-/healthy",
-            PrometheusClient(f"http://127.0.0.1:{env.get('PROMETHEUS_HOST_PORT', '9090')}").ready(),
+            PrometheusClient(f"http://127.0.0.1:{env.get('PROMETHEUS_HOST_PORT', '29090')}").ready(),
         ),
-        ("tempo /ready", TempoClient(f"http://127.0.0.1:{env.get('TEMPO_HOST_PORT', '3200')}").ready()),
+        ("tempo /ready", TempoClient(f"http://127.0.0.1:{env.get('TEMPO_HOST_PORT', '23200')}").ready()),
         (
             "grafana queries prometheus",
             _http_ok(
-                f"http://127.0.0.1:{env.get('GRAFANA_HOST_PORT', '3000')}/api/datasources/uid/prometheus/health",
+                f"http://127.0.0.1:{env.get('GRAFANA_HOST_PORT', '23000')}/api/datasources/uid/prometheus/health",
                 ("admin", env.get("GRAFANA_ADMIN_PASSWORD", "")),
             ),
         ),
         (
             "grafana queries tempo",
             _http_ok(
-                f"http://127.0.0.1:{env.get('GRAFANA_HOST_PORT', '3000')}"
+                f"http://127.0.0.1:{env.get('GRAFANA_HOST_PORT', '23000')}"
                 "/api/datasources/proxy/uid/tempo/api/search?limit=1",
                 ("admin", env.get("GRAFANA_ADMIN_PASSWORD", "")),
             ),
