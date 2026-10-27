@@ -1,0 +1,79 @@
+# Replays the lesson's two states through the rule file with promtool: the baseline (a few dozen samples per scrape,
+# about 1,800 head series) and the blow-up (hundreds of thousands). Run with: make test-rules
+rule_files:
+  - ../rules/cardinality.rules.yml
+
+evaluation_interval: 15s
+
+tests:
+  - name: baseline numbers stay silent
+    interval: 15s
+    input_series:
+      - series: 'scrape_samples_post_metric_relabeling{job="checkout"}'
+        values: "75x40"
+      - series: "prometheus_tsdb_head_series"
+        values: "1842x40"
+      - series: 'prometheus_target_scrapes_sample_duplicate_timestamp_total{}'
+        values: "0x40"
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: AppSeriesBudgetExceeded
+        exp_alerts: []
+      - eval_time: 9m
+        alertname: PrometheusHeadSeriesHigh
+        exp_alerts: []
+      - eval_time: 9m
+        alertname: MetricLabelGuardTriggered
+        exp_alerts: []
+
+  - name: a user_id label makes the budget and head-series alerts fire after their for-durations
+    interval: 15s
+    input_series:
+      # The label arrives at minute 2: samples per scrape jump from 75 to 331,000, head series to 198,340.
+      - series: 'scrape_samples_post_metric_relabeling{job="checkout"}'
+        values: "75x8 331000x32"
+      - series: "prometheus_tsdb_head_series"
+        values: "1842x8 198340x32"
+    alert_rule_test:
+      - eval_time: 2m30s
+        alertname: AppSeriesBudgetExceeded
+        exp_alerts: []
+      - eval_time: 4m
+        alertname: AppSeriesBudgetExceeded
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              job: checkout
+            exp_annotations:
+              summary: The checkout app exposes more than 1,000 samples per scrape.
+              description: "331000 samples per scrape; the expected count is under 200."
+              runbook: Open /api/v1/status/tsdb and read labelValueCountByLabelName; the label with thousands of values is the culprit.
+      - eval_time: 5m
+        alertname: PrometheusHeadSeriesHigh
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations:
+              summary: Prometheus holds more than 100,000 active series.
+              description: "198340 active series; memory and query time grow with this number."
+              runbook: Check seriesCountByMetricName at /api/v1/status/tsdb and fix the metric that owns most of them.
+
+  - name: the scrape guard colliding series raises a ticket
+    interval: 15s
+    input_series:
+      # The counter starts increasing at minute 1 (the guard strips user_id and samples collide).
+      - series: "prometheus_target_scrapes_sample_duplicate_timestamp_total"
+        values: "0x4 0+400x36"
+    alert_rule_test:
+      - eval_time: 30s
+        alertname: MetricLabelGuardTriggered
+        exp_alerts: []
+      - eval_time: 4m
+        alertname: MetricLabelGuardTriggered
+        exp_alerts:
+          - exp_labels:
+              severity: ticket
+            exp_annotations:
+              summary: The scrape guard is dropping a label and series are colliding.
+              description: "4400 duplicate samples in 5 minutes; a metric gained a label the guard removes."
+              runbook: Find the metric with the new label in the app's code and move the detail to a span attribute.

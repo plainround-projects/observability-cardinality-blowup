@@ -1,0 +1,26 @@
+# Baseline configuration plus the guard: any user_id label is stripped from the app's series before they are stored,
+# so a careless code change cannot recreate the cardinality explosion. The test in tests/observability checks that
+# this file differs from prometheus.yml only by the metric_relabel_configs block.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/rules/*.rules.yml
+
+scrape_configs:
+  - job_name: checkout
+    # A blown-up app serves tens of megabytes per scrape; give it time and a longer interval.
+    scrape_interval: 30s
+    scrape_timeout: 25s
+    static_configs:
+      - targets: ["app:9100"]
+    metric_relabel_configs:
+      # Removing the label makes the series of different users identical, so Prometheus keeps one sample per scrape
+      # and counts the rest in prometheus_target_scrapes_sample_duplicate_timestamp_total, which the
+      # MetricLabelGuardTriggered alert watches.
+      - action: labeldrop
+        regex: user_id
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

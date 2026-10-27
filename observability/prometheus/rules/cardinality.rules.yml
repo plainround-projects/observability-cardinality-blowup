@@ -1,0 +1,33 @@
+groups:
+  - name: cardinality
+    rules:
+      # The app's own scrape: a handful of series is normal, thousands means a label has gone unbounded.
+      - alert: AppSeriesBudgetExceeded
+        expr: scrape_samples_post_metric_relabeling{job="checkout"} > 1000
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: The checkout app exposes more than 1,000 samples per scrape.
+          description: "{{ $value }} samples per scrape; the expected count is under 200."
+          runbook: Open /api/v1/status/tsdb and read labelValueCountByLabelName; the label with thousands of values is the culprit.
+      # Prometheus itself: total active series in the head block.
+      - alert: PrometheusHeadSeriesHigh
+        expr: prometheus_tsdb_head_series > 100000
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: Prometheus holds more than 100,000 active series.
+          description: "{{ $value }} active series; memory and query time grow with this number."
+          runbook: Check seriesCountByMetricName at /api/v1/status/tsdb and fix the metric that owns most of them.
+      # The guard in prometheus.guarded.yml strips user_id, so a re-added label shows up as duplicate samples.
+      - alert: MetricLabelGuardTriggered
+        expr: increase(prometheus_target_scrapes_sample_duplicate_timestamp_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: ticket
+        annotations:
+          summary: The scrape guard is dropping a label and series are colliding.
+          description: "{{ $value }} duplicate samples in 5 minutes; a metric gained a label the guard removes."
+          runbook: Find the metric with the new label in the app's code and move the detail to a span attribute.
