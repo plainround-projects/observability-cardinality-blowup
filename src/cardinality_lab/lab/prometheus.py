@@ -107,7 +107,7 @@ class PrometheusClient:
 
     def tsdb_status(self) -> TsdbStatus:
         """The backend's own statistics: series per metric and distinct values per label."""
-        data = self._get("/api/v1/status/tsdb")["data"]
+        data = self._get("/api/v1/status/tsdb", {"limit": "50"})["data"]
         by_metric = tuple((item["name"], int(item["value"])) for item in data["seriesCountByMetricName"])
         by_label = tuple((item["name"], int(item["value"])) for item in data["labelValueCountByLabelName"])
         return TsdbStatus(by_metric, by_label)
