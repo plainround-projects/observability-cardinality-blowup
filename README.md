@@ -132,6 +132,7 @@ tests/
 observability/       the Collector, Tempo, Prometheus (baseline and guarded configs, alert rules, promtool replay test)
                      and Grafana (data sources, dashboard) as code.
 docs/                label-placement-guide.md (lesson step 6) and the decision records in adr/.
+tech/                one beginner-level note per technology the repository uses, with every file quoted and explained (start at tech/README.md).
 docker-compose.yml   the stack.               Dockerfile  the app image (non-root, base image pinned by digest).
 pyproject.toml       project metadata and every tool's configuration (ruff, mypy, pytest, import-linter).
 requirements*.lock   hash-pinned dependencies (runtime, and runtime plus development tools).
