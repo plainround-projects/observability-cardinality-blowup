@@ -79,12 +79,12 @@ The imports: `random` (seeded draws), `threading` (lock and thread-local), `time
 
 ```python
 def user_name(index: int) -> str:
-    """The id of simulated user ``index`` (1-based): ``user-000001`` and so on."""
+    """The id of simulated user ``index`` (1-based): ``user-000001`` for 1, ``user-000002`` for 2."""
     return f"user-{index:06d}"
 
 
 def tenant_name(index: int) -> str:
-    """The id of tenant ``index`` (1-based): ``tenant-0001`` and so on."""
+    """The id of tenant ``index`` (1-based): ``tenant-0001`` for 1, ``tenant-0002`` for 2."""
     return f"tenant-{index:04d}"
 ```
 
