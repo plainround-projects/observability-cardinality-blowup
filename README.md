@@ -38,41 +38,82 @@ make down                                # stops everything and deletes its data
 
 `make help` lists every target. `make run` recreates the app and replaces Prometheus several times (see [ARCHITECTURE.md](ARCHITECTURE.md#one-run-step-by-step-make-run)), so do not run it while looking at a dashboard you want to keep. Grafana is at <http://localhost:23000> (user `admin`, password `GRAFANA_ADMIN_PASSWORD` from `.env`), dashboard "Cardinality blow-up".
 
-`make run` prints one report at the end. This is `make run USERS=5000 REQUESTS=20000` (a tenth of the lesson's size) on a Mac with 12 cores and Docker's default 7.6 GB; the numbers repeat in order of magnitude, not exactly, and the full-size run is in the next section.
+`make run` prints one report at the end. This is `make run USERS=5000 REQUESTS=20000` (a tenth of the lesson's size) on a Mac with 12 cores and Docker's default 7.6 GB; the numbers repeat in order of magnitude, not exactly, and the full-size run is in the section after this one.
 
 ```text
 1. Baseline: fresh Prometheus, three bounded labels
-  sent 5000 requests from 3143 users at 449/s
+  sent 5000 requests from 3143 users at 1150/s
 2. Blow it up: add the user_id label to both metrics and send the full traffic
-  sent 20000 requests from 4902 users at 537/s
+  sent 20000 requests from 4902 users at 1192/s
 3. Find the offender from Prometheus's own statistics
 4. Fix: remove the label, keep user.id on the span, start from a fresh Prometheus with the guard
-  sent 5000 requests from 3141 users at 1103/s
+  sent 5000 requests from 3141 users at 813/s
 5. Guard: someone adds user_id back; the scrape rule drops it before storage
-  sent 5000 requests from 3170 users at 982/s
+  sent 5000 requests from 3170 users at 1032/s
 6. Hidden slow dependency: one route, one tenant, found from traces
-  sent 8000 requests from 3989 users at 430/s
-  sent 8000 requests from 4000 users at 399/s
+  sent 8000 requests from 3989 users at 1343/s
+  sent 8000 requests from 4000 users at 886/s
 Plan: 5000 users, 20000 requests
 
 Expected series for the app (1 route x 1 method x 3 statuses): counter 3, histogram 24, total 27
 
                                 series   memory MB  query ms  samples/scrape
-baseline                           669          81         6              43
-with user_id                     49946         176        17           49291
-after the fix (fresh TSDB)         662          79         2              43
-user_id re-added, guarded          671          66        14           29293
+baseline                           669          56         2              43
+with user_id                     49973         133        12           49318
+after the fix (fresh TSDB)         669          40         2              43
+user_id re-added, guarded          671          77         1           29338
 series growth with user_id: 75x (4902 distinct users in the traffic)
 
-Offender from /api/v1/status/tsdb: label 'user_id' has 4902 values; metric 'request_latency_seconds_bucket' has 32868 series.
+Offender from /api/v1/status/tsdb: label 'user_id' has 4902 values; metric 'request_latency_seconds_bucket' has 32886 series.
 Traces for user-002343: 7 found, 7 requests sent.
 
-Hidden slow dependency (tenant-0007, 0.51% of traffic): route p95 43.8 ms -> 46.2 ms.
+Hidden slow dependency (tenant-0007, 0.51% of traffic): route p95 8.4 ms -> 47.8 ms.
 Trace query on tenant + route + duration > 1 s: 41 traces of 41 slow requests, shortest 2000 ms.
 ```
 
 Reading it: the series count grew 75 times for 4,902 distinct users (it grows with the number of users, not the number of requests); the stored series return to the baseline after the fix and stay there when the label comes back behind the guard. The `samples/scrape` column is what the app exposed after the guard's `labeldrop`: still about 29,000, because the colliding samples are counted before Prometheus discards them (that is the signal `MetricLabelGuardTriggered` and `AppSeriesBudgetExceeded` alert on), while the series in the head stay at 671. The memory and query-time columns move less than the series count at this size; at the lesson's size (50,000 users) they move by an order of magnitude.
 
+
+## The lesson's own size: `make run`
+
+The same six steps with 50,000 users and 200,000 requests (clean clone, 2026-11-02, about 50 minutes, on a host shared with other projects; load average 15 to 40). The series grow 739 times, Prometheus's memory about 25 times and the dashboard query about 40 times; the guard keeps the stored series at the baseline.
+
+```text
+1. Baseline: fresh Prometheus, three bounded labels
+  sent 5000 requests from 4753 users at 1006/s
+2. Blow it up: add the user_id label to both metrics and send the full traffic
+  sent 200000 requests from 49094 users at 100/s
+3. Find the offender from Prometheus's own statistics
+4. Fix: remove the label, keep user.id on the span, start from a fresh Prometheus with the guard
+  sent 50000 requests from 31533 users at 1167/s
+5. Guard: someone adds user_id back; the scrape rule drops it before storage
+  sent 50000 requests from 31606 users at 898/s
+6. Hidden slow dependency: one route, one tenant, found from traces
+  sent 8000 requests from 7389 users at 650/s
+  sent 8000 requests from 7405 users at 567/s
+Plan: 50000 users, 200000 requests
+
+Expected series for the app (1 route x 1 method x 3 statuses): counter 3, histogram 24, total 27
+
+                                series   memory MB  query ms  samples/scrape
+baseline                           669          41         2              43
+with user_id                    494226        1011        80          493567
+after the fix (fresh TSDB)         669          48         2              43
+user_id re-added, guarded          672         413         4          293101
+series growth with user_id: 739x (49094 distinct users in the traffic)
+
+Offender from /api/v1/status/tsdb: label 'user_id' has 49090 values; metric 'request_latency_seconds_bucket' has 329052 series.
+Traces for user-045462: 6 found, 9 requests sent.
+
+Hidden slow dependency (tenant-0007, 0.51% of traffic): route p95 36.0 ms -> 48.6 ms.
+Trace query on tenant + route + duration > 1 s: 41 traces of 41 slow requests, shortest 2000 ms.
+```
+
+Two things to read in it. The line "Traces for user-045462: 6 found, 9 requests sent" came from the first version of the probe search, which gave up after 90 seconds while Tempo was still catching up on a loaded host; it now polls for up to 240 seconds like the slow-tenant search, and the tenth-size run above, with the final code, finds every request (7 of 7), as does `make test-e2e`. And the route p95 moves only from 36 ms to 49 ms while 41 requests take two seconds: the metric hides them, the trace query finds all 41.
+
+## Verified
+
+In fresh clones of the committed repository on 2026-11-02 (macOS, Docker 24.0.6, Python 3.13 for the lab tools; the host was shared with other projects, load average 10 to 40): `make up` (0), `make check` (ruff, mypy, import-linter, 90 unit and configuration tests, promtool config and rule tests: all passed), `make test-integration` (3 passed), `make test-e2e` (6 passed in 11 minutes 30 seconds), `make run` at the lesson's size (0, transcript above) and `make run USERS=5000 REQUESTS=20000` with the final code (0, first transcript), `make down` (0), clean tree afterwards. These runs found and fixed three things: the integration test read a label list that cannot be relied on to contain a one-value label (it now asks for the series directly), the p95 window was shorter than two scrapes on a fast host (it is now at least 180 seconds), and the trace searches gave up too early on a loaded host (240 seconds).
 
 ## Done when: the lesson's checklist and the proof for each line
 
