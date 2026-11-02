@@ -35,10 +35,13 @@ def test_prometheus_scrapes_the_app_and_the_series_carry_only_route_method_and_s
     while time.monotonic() < deadline and not PROMETHEUS.scalar('up{job="checkout"}'):
         time.sleep(2)
     assert PROMETHEUS.scalar('up{job="checkout"}') == 1
-    time.sleep(35)
-    labels = {name for name, _ in PROMETHEUS.tsdb_status().values_by_label}
-    assert "route" in labels
-    assert "user_id" not in labels
+    series = 'count(requests_total{job="checkout",route="checkout"})'
+    while time.monotonic() < deadline and not PROMETHEUS.scalar(series):
+        time.sleep(2)
+    # Ask for the series directly: the TSDB statistics list only the labels with the most values, and a label with
+    # one value ("route") can fall outside that list on a Prometheus with many labels of its own.
+    assert PROMETHEUS.scalar(series) > 0
+    assert PROMETHEUS.scalar('count({job="checkout",user_id!=""})') == 0
 
 
 def test_one_request_leaves_exactly_one_trace_findable_by_its_user_id():
