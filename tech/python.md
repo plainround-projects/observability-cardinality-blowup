@@ -509,9 +509,13 @@ JOB = "checkout"
 SLOW_TENANT = tenant_name(7)
 STATUS_VALUES = 3
 P95_SLOW_FLOOR_SECONDS = 2.0
+# The app is scraped every 60 s and increase() needs two samples inside its range, so a quick run (a fast host sends
+# 8,000 requests in 15 s) still needs a window of several scrape intervals.
+MIN_P95_WINDOW_SECONDS = 180
+TRACE_SEARCH_TIMEOUT_SECONDS = 240.0
 ```
 
-The imports show the layering: `lab` may import `domain` and `infrastructure` (here only a constant, `LATENCY_BUCKETS`) but nothing imports `lab`. Constants: the Prometheus job name, the slow tenant (`tenant-0007`), the three status values the baseline has, and a floor for the p95.
+The imports show the layering: `lab` may import `domain` and `infrastructure` (here only a constant, `LATENCY_BUCKETS`) but nothing imports `lab`. Constants: the Prometheus job name, the slow tenant (`tenant-0007`), the three status values the baseline has, and a floor for the p95. The comment above the last two explains them: the app is scraped every 60 seconds and `increase()` needs two samples inside its range, so even when a fast host sends 8,000 requests in 15 seconds, the p95 is computed over a window of at least `MIN_P95_WINDOW_SECONDS = 180` (three scrape intervals). `TRACE_SEARCH_TIMEOUT_SECONDS = 240.0` is how long the scenario polls Tempo for the slow traces before giving up.
 
 ```python
 class MetricsStore(Protocol):
@@ -730,14 +734,15 @@ Phase 6 is `_slow_dependency`; then the report is built from everything measured
 
 ```python
     def _route_p95(self, window_seconds: float) -> float:
+        window = max(int(window_seconds), MIN_P95_WINDOW_SECONDS)
         expression = (
             "histogram_quantile(0.95, sum by (le) "
-            f'(increase(request_latency_seconds_bucket{{job="{JOB}"}}[{int(window_seconds)}s])))'
+            f'(increase(request_latency_seconds_bucket{{job="{JOB}"}}[{window}s])))'
         )
         return self._prometheus.scalar(expression)
 ```
 
-`_route_p95` computes the 95th percentile of the whole route over a window with `histogram_quantile` over `increase(...)` of the buckets (see `promql.md`). The f-string uses doubled braces `{{ }}` to write literal braces.
+`_route_p95` computes the 95th percentile of the whole route over a window with `histogram_quantile` over `increase(...)` of the buckets (see `promql.md`). The window is the length of the traffic phase plus 45 seconds, but never less than `MIN_P95_WINDOW_SECONDS` (`max(int(window_seconds), MIN_P95_WINDOW_SECONDS)`): a window shorter than two scrapes returns no data at all, and the scenario would then read a p95 of 0. The f-string uses doubled braces `{{ }}` to write literal braces.
 
 ```python
     def _slow_dependency(self) -> SlowFinding:
@@ -759,6 +764,7 @@ Phase 6 is `_slow_dependency`; then the report is built from everything measured
         hits = self._tempo.wait_for_search(
             lambda: self._tempo.search_traceql(query, after_load.started_at - 5, after_load.finished_at + 30),
             expected_at_least=expected_slow,
+            timeout_seconds=TRACE_SEARCH_TIMEOUT_SECONDS,
         )
         return SlowFinding(
             route_p95_before_seconds=before,
@@ -770,7 +776,7 @@ Phase 6 is `_slow_dependency`; then the report is built from everything measured
         )
 ```
 
-Phase 6, **hidden slow dependency**: first traffic with the rule off gives the p95 *before*; then the app restarts with `SLOW_TENANT=tenant-0007` and the same amount of traffic gives the p95 *after*. That tenant is under one percent of requests, so the route's p95 barely moves; the metrics hide the problem. The TraceQL query `{ name = "checkout" && span.tenant.id = "tenant-0007" && span.route = "checkout" && duration > 1s }` finds the slow requests from the traces: `wait_for_search` polls until Tempo has as many hits as the number of requests sent for that tenant. `min((hit.duration_ms for hit in hits), default=0.0)` is the shortest slow trace; `default` avoids an error when there are no hits.
+Phase 6, **hidden slow dependency**: first traffic with the rule off gives the p95 *before*; then the app restarts with `SLOW_TENANT=tenant-0007` and the same amount of traffic gives the p95 *after*. That tenant is under one percent of requests, so the route's p95 barely moves; the metrics hide the problem. The TraceQL query `{ name = "checkout" && span.tenant.id = "tenant-0007" && span.route = "checkout" && duration > 1s }` finds the slow requests from the traces: `wait_for_search` polls (for up to `TRACE_SEARCH_TIMEOUT_SECONDS`) until Tempo has as many hits as the number of requests sent for that tenant. `min((hit.duration_ms for hit in hits), default=0.0)` is the shortest slow trace; `default` avoids an error when there are no hits.
 
 ```python
 def render_report(report: Report) -> str:

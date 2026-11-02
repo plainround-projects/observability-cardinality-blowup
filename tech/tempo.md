@@ -117,9 +117,9 @@ The `-config.file` flag, the read-only mounted config, the data volume, port 320
 `search_traceql` sends a **TraceQL** query. The scenario's query is
 
 ```python
-        query = (
-            f'{{ name = "checkout" && span.tenant.id = "{SLOW_TENANT}" && span.route = "checkout" && duration > 1s }}'
-        )
+        after_load = self._traffic(plan.slow_phase_requests, 5)
+        self._settle()
+        after = self._route_p95(after_load.finished_at - after_load.started_at + 45)
 ```
 
 `{ ... }` selects spans. `name = "checkout"` matches the span's name; `span.tenant.id = "tenant-0007"` and `span.route = "checkout"` match span attributes (`span.` is the prefix for span-level attributes); `&&` is "and"; `duration > 1s` keeps spans longer than a second. So it finds the checkout spans of the slow tenant that took more than one second: exactly the requests the p95 hid.

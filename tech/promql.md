@@ -69,12 +69,12 @@ DASHBOARD_QUERY = "sum(rate(requests_total[5m])) by (route)"
 ### The route p95 that hides a slow tenant
 
 ```python
-    def _route_p95(self, window_seconds: float) -> float:
-        expression = (
-            "histogram_quantile(0.95, sum by (le) "
-            f'(increase(request_latency_seconds_bucket{{job="{JOB}"}}[{int(window_seconds)}s])))'
+            guarded=guarded,
+            slow=slow,
         )
-        return self._prometheus.scalar(expression)
+
+    def _route_p95(self, window_seconds: float) -> float:
+        window = max(int(window_seconds), MIN_P95_WINDOW_SECONDS)
 ```
 
 `increase(request_latency_seconds_bucket{job="checkout"}[Ns])` is how many observations each bucket gained in the last N seconds (N is the length of the traffic phase plus 45 s). `sum by (le)` adds the series of every status, keeping the bucket edge. `histogram_quantile(0.95, ...)` estimates the 95th percentile. Because one tenant out of 200 is under one percent of traffic, making that tenant's requests two seconds slow barely moves a p95: the lesson's point that averages and percentiles hide a small slice.
