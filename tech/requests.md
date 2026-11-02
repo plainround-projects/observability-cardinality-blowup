@@ -334,7 +334,7 @@ client = PrometheusClient('http://127.0.0.1:29090')
 print(client.head_series(), client.tsdb_status().top_label)"
 ```
 
-Expected (needs `make up`): a number around 1,800 to 2,000 and the label with the most values, for example `('__name__', 200)` or `('le', 7)`.
+Expected (needs `make up`): the baseline number of series (a few hundred, for example 669) and the label with the most values, for example `('__name__', 292)`.
 
 ```bash
 curl -s "http://127.0.0.1:29090/api/v1/status/tsdb?limit=3" | python3 -m json.tool | head -20

@@ -58,7 +58,7 @@ datasources:
         enabled: false
 ```
 
-`apiVersion: 1` is the provisioning format. **Prometheus**: `uid: prometheus` is the stable id the dashboard uses; `access: proxy` means Grafana's server makes the queries; `url: http://prometheus:9090` is the address inside the Compose network; `isDefault: true`; `httpMethod: POST` sends queries in the body so long expressions fit. **Tempo**: `uid: tempo` and `url: http://tempo:3200`; `nodeGraph.enabled: false` turns off the service-graph view (this lab has one service). Unlike `observability-three-signals`, there are no links between the data sources: no logs and no exemplars here.
+`apiVersion: 1` is the provisioning format. **Prometheus**: `uid: prometheus` is the stable id the dashboard uses; `access: proxy` means Grafana's server makes the queries; `url: http://prometheus:9090` is the address inside the Compose network; `isDefault: true`; `httpMethod: POST` sends queries in the body so long expressions fit. **Tempo**: `uid: tempo` and `url: http://tempo:3200`; `nodeGraph.enabled: false` turns off the service-graph view (this lab has one service). There are no links between the data sources: no logs and no exemplars in this lab.
 
 ### `dashboards.yaml`
 
@@ -147,7 +147,7 @@ A dashboard provider named `cardinality-blowup` reads JSON from `/etc/grafana/da
     },
 ```
 
-`type: "stat"`. The `description` tells the reader what to expect: about 1.8 thousand series at the baseline, hundreds of thousands with a `user_id` label. `gridPos` places it on the 24-column grid (`x: 0, y: 0, w: 6, h: 4`: top-left, a quarter of the width, four rows). `fieldConfig.defaults.unit: "short"` formats large numbers compactly (`198 K`). `options.reduceOptions.calcs: ["lastNotNull"]` shows the last value that is not null, and `colorMode: "value"` colors the number. The single target has `expr: "prometheus_tsdb_head_series"` and `"instant": true`, which asks for one value at the current time instead of a range.
+`type: "stat"`. The `description` tells the reader what to expect: it says about 1.8 thousand series at the baseline and hundreds of thousands with a `user_id` label (in the verified run the baseline was a few hundred, 669, and the blow-up tens of thousands at the tenth-size scenario: the point is the ratio). `gridPos` places it on the 24-column grid (`x: 0, y: 0, w: 6, h: 4`: top-left, a quarter of the width, four rows). `fieldConfig.defaults.unit: "short"` formats large numbers compactly (`198 K`). `options.reduceOptions.calcs: ["lastNotNull"]` shows the last value that is not null, and `colorMode: "value"` colors the number. The single target has `expr: "prometheus_tsdb_head_series"` and `"instant": true`, which asks for one value at the current time instead of a range.
 
 **Panel 2, Prometheus memory** (unit `bytes`, shown as KiB, MiB, GiB):
 

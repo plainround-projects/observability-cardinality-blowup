@@ -69,12 +69,12 @@ DASHBOARD_QUERY = "sum(rate(requests_total[5m])) by (route)"
 ### The route p95 that hides a slow tenant
 
 ```python
+            probe_user_traces=len(hits),
             guarded=guarded,
             slow=slow,
         )
 
     def _route_p95(self, window_seconds: float) -> float:
-        window = max(int(window_seconds), MIN_P95_WINDOW_SECONDS)
 ```
 
 `increase(request_latency_seconds_bucket{job="checkout"}[Ns])` is how many observations each bucket gained in the last N seconds (N is the length of the traffic phase plus 45 s). `sum by (le)` adds the series of every status, keeping the bucket edge. `histogram_quantile(0.95, ...)` estimates the 95th percentile. Because one tenant out of 200 is under one percent of traffic, making that tenant's requests two seconds slow barely moves a p95: the lesson's point that averages and percentiles hide a small slice.
@@ -109,7 +109,7 @@ The dashboard (`grafana.md`) uses, for its panels: `prometheus_tsdb_head_series`
 curl -s --get "http://127.0.0.1:29090/api/v1/query" --data-urlencode 'query=prometheus_tsdb_head_series'
 ```
 
-Expected (needs `make up`): a result with a value near 1,800 at the baseline.
+Expected (needs `make up`): a result with a value of a few hundred at the baseline (669 in the verified run; it grows a little over time as Prometheus scrapes its own metrics).
 
 ```bash
 curl -s --get "http://127.0.0.1:29090/api/v1/query" --data-urlencode 'query=scrape_samples_post_metric_relabeling{job="checkout"}'

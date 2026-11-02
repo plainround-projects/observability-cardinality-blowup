@@ -173,6 +173,7 @@ class ScenarioRunner:
                 {"user.id": probe_user}, fix_load.started_at - 5, fix_load.finished_at + 30
             ),
             expected_at_least=probe_requests,
+            timeout_seconds=TRACE_SEARCH_TIMEOUT_SECONDS,
         )
 
         self._log("5. Guard: someone adds user_id back; the scrape rule drops it before storage")

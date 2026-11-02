@@ -334,7 +334,7 @@ Expected: `SUCCESS` lines for the rules file and both configuration files.
 curl -s "http://127.0.0.1:29090/api/v1/status/tsdb?limit=5" | python3 -c "import json,sys; d=json.load(sys.stdin)['data']; print(d['headStats']['numSeries'], [(x['name'], x['value']) for x in d['labelValueCountByLabelName'][:3]])"
 ```
 
-Expected (needs `make up`): about 1,800 series and the three labels with the most values (no `user_id`).
+Expected (needs `make up`): a few hundred series (669 in the verified run) and the three labels with the most values (no `user_id`).
 
 ```bash
 curl -s "http://127.0.0.1:29090/api/v1/rules" | python3 -c "import json,sys; print([r['name'] for g in json.load(sys.stdin)['data']['groups'] for r in g['rules']])"

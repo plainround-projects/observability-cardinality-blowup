@@ -12,7 +12,7 @@ Tempo is where the per-user detail goes after the fix. A metric cannot afford a 
 
 | Path | What it does |
 | --- | --- |
-| `observability/tempo/tempo.yaml` | Tempo's configuration (the same file as in `observability-three-signals`). |
+| `observability/tempo/tempo.yaml` | Tempo's configuration (a single-binary Tempo with local storage). |
 | `docker-compose.yml` (service `tempo`) | The pinned image, config, data volume, port 23200 and health check. |
 | `observability/collector/config.yaml` | The exporter that sends spans here (see `opentelemetry-collector.md`). |
 | `observability/grafana/provisioning/datasources/datasources.yaml` | The Tempo data source. |
@@ -117,9 +117,9 @@ The `-config.file` flag, the read-only mounted config, the data volume, port 320
 `search_traceql` sends a **TraceQL** query. The scenario's query is
 
 ```python
+        self._compose.recreate_app(include_user_id=False, slow_tenant=SLOW_TENANT, prometheus_config=GUARDED_CONFIG)
         after_load = self._traffic(plan.slow_phase_requests, 5)
         self._settle()
-        after = self._route_p95(after_load.finished_at - after_load.started_at + 45)
 ```
 
 `{ ... }` selects spans. `name = "checkout"` matches the span's name; `span.tenant.id = "tenant-0007"` and `span.route = "checkout"` match span attributes (`span.` is the prefix for span-level attributes); `&&` is "and"; `duration > 1s` keeps spans longer than a second. So it finds the checkout spans of the slow tenant that took more than one second: exactly the requests the p95 hid.

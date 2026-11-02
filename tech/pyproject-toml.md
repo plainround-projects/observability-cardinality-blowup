@@ -120,7 +120,7 @@ cat .venv/bin/cardinality-lab-health
 Expected: a short Python script that imports `main` from `cardinality_lab.interfaces.health_cli` and runs it.
 
 ```bash
-.venv/bin/pip show observability-cardinality-blowup | head -3
+.venv/bin/pip show observability-cardinality-blowup | grep -E "^(Name|Version)"
 ```
 
 Expected: `Name: observability-cardinality-blowup`, `Version: 0.1.0`.

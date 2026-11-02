@@ -696,10 +696,11 @@ Phase 3, **diagnosis**: ask Prometheus for its own statistics (`/api/v1/status/t
                 {"user.id": probe_user}, fix_load.started_at - 5, fix_load.finished_at + 30
             ),
             expected_at_least=probe_requests,
+            timeout_seconds=TRACE_SEARCH_TIMEOUT_SECONDS,
         )
 ```
 
-Phase 4, **fix**: a fresh Prometheus with the guarded configuration, the app without the label, a quarter of the traffic. The busiest user (`most_common(1)[0]` of a `Counter`) becomes the probe: the scenario asks Tempo for all traces with that `user.id` and expects one per request, proving the detail was not lost, only moved from metrics to traces.
+Phase 4, **fix**: a fresh Prometheus with the guarded configuration, the app without the label, a quarter of the traffic. The busiest user (`most_common(1)[0]` of a `Counter`) becomes the probe: the scenario asks Tempo for all traces with that `user.id` and expects one per request, proving the detail was not lost, only moved from metrics to traces. The search polls for up to `TRACE_SEARCH_TIMEOUT_SECONDS` (240 s): at the lesson's size Tempo can lag behind a busy host, and a first lesson-size run reported 6 traces found for 9 requests sent when it gave up after 90 s.
 
 ```python
         self._log("5. Guard: someone adds user_id back; the scrape rule drops it before storage")

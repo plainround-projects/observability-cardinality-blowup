@@ -21,7 +21,7 @@ The app logs only when something is not normal (a declined or failed checkout, a
 
 When code calls `logger.info("text", extra={"order_id": 5})`, the logger first compares the level with its own threshold; if the level is too low the call ends. Otherwise it builds a **LogRecord** object: message, level, time (`record.created`, seconds since 1970), logger name, and every key of `extra` set as an attribute on the record. Then it passes the record to its own handlers and up the tree to the parents' handlers. Each handler calls its formatter's `format(record)` to get a string and writes it.
 
-The OpenTelemetry SDK can also ship records over OTLP with its own `LoggingHandler`; this repository does not attach it, because logs are not one of the stores of this lesson (the sister repository `observability-three-signals` does).
+The OpenTelemetry SDK can also ship records over OTLP with its own `LoggingHandler`; this repository does not attach it, because logs are not one of the stores of this lesson.
 
 Standard attributes of a record (`name`, `msg`, `levelname`, `created`, ...) are always present. Anything else on `record.__dict__` was added by `extra=`, and the formatter in this repository copies those into the JSON output.
 

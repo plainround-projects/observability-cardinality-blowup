@@ -95,7 +95,7 @@ def memory_telemetry() -> Iterator[InMemoryTelemetry]:
     meter_provider.shutdown()
 ```
 
-The same fixture as in the sister repository: a tracer provider with an in-memory span exporter and a meter provider with an in-memory reader, bundled in a dataclass and yielded to the test; the code after `yield` shuts them down. A test uses it by naming `memory_telemetry` as a parameter. No network, no Collector.
+An OpenTelemetry pipeline that stays in memory so tests can read back what the code recorded: a tracer provider with an in-memory span exporter and a meter provider with an in-memory reader, bundled in a dataclass and yielded to the test; the code after `yield` shuts them down. A test uses it by naming `memory_telemetry` as a parameter. No network, no Collector.
 
 ### Domain and application
 
@@ -372,7 +372,7 @@ def test_configure_logging_replaces_handlers_and_writes_json_to_the_stream():
     assert json.loads(lines[0])["service"] == "front"
 ```
 
-Same four tests as in the sister repository: standard fields, trace and span ids inside a span, exceptions as text, and `configure_logging` called twice writing each line once.
+Four tests of the log formatter (`python-logging.md`): every line is one JSON object with the standard fields; inside a span the line carries the trace and span ids (32 and 16 hex digits); an exception is included as text; and `configure_logging` called twice still writes each line once, to an in-memory stream (`io.StringIO`).
 
 ```python
 import pytest

@@ -80,7 +80,7 @@ printf 'def f(x: int) -> str:\n    return x\n' > /tmp/demo_mypy.py && .venv/bin/
 Expected: `error: Incompatible return value type (got "int", expected "str")`.
 
 ```bash
-.venv/bin/mypy --strict --no-incremental src/three_signals/domain/orders.py
+.venv/bin/mypy --strict --no-incremental src/cardinality_lab/domain/checkout.py
 ```
 
 Expected: `Success: no issues found in 1 source file`.

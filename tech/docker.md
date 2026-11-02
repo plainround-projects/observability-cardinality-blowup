@@ -106,7 +106,7 @@ sql
 .env
 ```
 
-The build context (this folder) is sent to the builder; these entries are left out: the git history, the virtual environment, logs, tests, docs, the observability configs and SQL files (not needed in the image), Python caches (`**/__pycache__` matches at any depth), tool caches, the coverage file, and `.env`, which holds local secrets and must never end up in an image. The `sql` entry is a leftover from the sister repositories; there is no `sql` folder here and it does no harm.
+The build context (this folder) is sent to the builder; these entries are left out: the git history, the virtual environment, logs, tests, docs, the observability configs and SQL files (not needed in the image), Python caches (`**/__pycache__` matches at any depth), tool caches, the coverage file, and `.env`, which holds local secrets and must never end up in an image. There is no `sql` folder in this repository; that entry is harmless.
 
 ## Try it yourself
 
