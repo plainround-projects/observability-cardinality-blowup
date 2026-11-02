@@ -17,6 +17,10 @@ JOB = "checkout"
 SLOW_TENANT = tenant_name(7)
 STATUS_VALUES = 3
 P95_SLOW_FLOOR_SECONDS = 2.0
+# The app is scraped every 60 s and increase() needs two samples inside its range, so a quick run (a fast host sends
+# 8,000 requests in 15 s) still needs a window of several scrape intervals.
+MIN_P95_WINDOW_SECONDS = 180
+TRACE_SEARCH_TIMEOUT_SECONDS = 240.0
 
 
 class MetricsStore(Protocol):
@@ -195,9 +199,10 @@ class ScenarioRunner:
         )
 
     def _route_p95(self, window_seconds: float) -> float:
+        window = max(int(window_seconds), MIN_P95_WINDOW_SECONDS)
         expression = (
             "histogram_quantile(0.95, sum by (le) "
-            f'(increase(request_latency_seconds_bucket{{job="{JOB}"}}[{int(window_seconds)}s])))'
+            f'(increase(request_latency_seconds_bucket{{job="{JOB}"}}[{window}s])))'
         )
         return self._prometheus.scalar(expression)
 
@@ -220,6 +225,7 @@ class ScenarioRunner:
         hits = self._tempo.wait_for_search(
             lambda: self._tempo.search_traceql(query, after_load.started_at - 5, after_load.finished_at + 30),
             expected_at_least=expected_slow,
+            timeout_seconds=TRACE_SEARCH_TIMEOUT_SECONDS,
         )
         return SlowFinding(
             route_p95_before_seconds=before,
