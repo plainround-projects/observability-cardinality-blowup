@@ -9,6 +9,24 @@ A checkout app and a real Prometheus that you overload on purpose with a `user_i
 | **Level** | Intermediate |
 | **Architecture** | [ARCHITECTURE.md](ARCHITECTURE.md), decisions in [docs/adr](docs/adr), the placement guide in [docs/label-placement-guide.md](docs/label-placement-guide.md) |
 
+## Architecture
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/architecture-dark.svg">
+  <img alt="The Docker Compose stack of the checkout app: Prometheus scrapes it on port 9100, the Collector sends spans to Tempo, Grafana reads both, and the Scenario drives it. The amber arrow is the scrape that carries the user_id label." src="docs/diagrams/architecture.svg">
+</picture>
+
+The amber edge is the scrape that carries the user_id label; the same detail travels as span attributes to Tempo, which has no series to multiply.
+
+## How one run flows
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/flow-dark.svg">
+  <img alt="The Scenario runs six steps: baseline of 669 series, 494,226 with user_id, the offender read from Prometheus, a guarded fresh Prometheus, the label back behind the guard, and 41 slow traces found with TraceQL." src="docs/diagrams/flow.svg">
+</picture>
+
+Amber rows are the label that multiplies the series and the p95 that hides one slow tenant; the green box is where the run ends.
+
 ## Prerequisites
 
 | Tool | Version | Used for |

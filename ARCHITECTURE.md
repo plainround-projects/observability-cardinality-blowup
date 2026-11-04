@@ -19,6 +19,8 @@ Component names match the lesson's diagram: load generator, downstream call, che
 
 ## Data flow
 
+Drawn versions of this figure and of the walk-through: [the architecture](docs/diagrams/architecture.svg) and [one run](docs/diagrams/flow.svg).
+
 ```mermaid
 flowchart LR
     load([Load generator<br/>50,000 users]) -->|GET /checkout<br/>X-User-Id, X-Tenant-Id| app[Checkout app]
